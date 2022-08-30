@@ -1,0 +1,18 @@
+--when setting up trigger, it will change database, so consider to COMMIT first
+USE database;
+
+COMMIT;
+
+--setup trigger before inserting data
+DELIMITER $$
+
+CREATE TRIGGER trigger_name
+BEFORE INSERT ON table_name
+FOR EACH ROW --the affect on each row
+BEGIN
+	IF NEW.data < 0 THEN
+			SET NEW.data = 0;
+	END IF;
+END $$
+
+DELIMITER ;
