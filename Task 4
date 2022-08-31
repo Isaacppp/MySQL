@@ -24,7 +24,7 @@ FROM
     t_dept_emp de ON e.emp_no = de.emp_no
     JOIN
     t_departments d ON de.dept_no = d.dept_no
-## WHERE Statement here: stating only salary value between 2 parameters should be taken into consideration
+## WHERE Statement here: stating only salary value between 2 IN parameters should be taken into consideration
 WHERE
 	s.salary BETWEEN p_salary_1 AND p_salary_2
 GROUP BY e.gender, d.dept_name;
