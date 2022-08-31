@@ -1,0 +1,35 @@
+/*
+Task 4
+Create an SQL stored procedure that will allow you to obtain the average male 
+and female salary per department within a certain salary range. 
+Let this range be defined by two values the user can insert when calling the procedure.
+
+Finally, visualize the obtained result-set in Tableau as a double bar chart. 
+*/
+
+DROP PROCEDURE IF EXISTS obtain_average_salary
+
+DELIMITER $$
+CREATE PROCEDURE obtain_average_salary(IN p_salary_1 FLOAT, IN p_salary_2 FLOAT)
+BEGIN
+SELECT
+	e.gender,
+	d.dept_name,
+    AVG(s.salary)
+FROM
+	t_salaries s
+    JOIN
+    t_employees e ON s.emp_no = e.emp_no
+    JOIN
+    t_dept_emp de ON e.emp_no = de.emp_no
+    JOIN
+    t_departments d ON de.dept_no = d.dept_no
+WHERE
+	s.salary BETWEEN p_salary_1 AND p_salary_2
+GROUP BY e.gender, d.dept_name;
+END$$
+DELIMITER ;
+
+--CALL procedure
+
+CALL obtain_average_salary(60000,90000);
