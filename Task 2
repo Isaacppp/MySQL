@@ -1,9 +1,9 @@
 /*
 Task 2
-Compare the number of male managers to the number of female managers 
+1. Question: Compare the number of male managers to the number of female managers 
 from different departments for each year, starting from 1990
 
-To visualize this analysis to an area chart
+2. Visual: Area Chart
 */
 
 SELECT
