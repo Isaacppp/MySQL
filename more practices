@@ -1,0 +1,273 @@
+/*
+exercise 1 -
+Find the average salary of the male and female employees in each department.  
+*/
+
+SELECT 
+    e.gender, d.dept_name, AVG(salary) AS avg_salary
+FROM
+    salaries s
+        JOIN
+    employees e ON s.emp_no = e.emp_no
+        JOIN
+    dept_emp de ON e.emp_no = de.emp_no
+        JOIN
+    departments d ON de.dept_no = d.dept_no
+GROUP BY e.gender , d.dept_name
+ORDER BY s.emp_no , d.dept_name;
+
+/*
+exercise 2 -
+Find the lowest department number encountered in the 'dept_emp' table. Then, find the highest 
+department number.
+*/
+
+SELECT
+	MIN(de.dept_no) AS lowest,
+    MAX(de.dept_no) AS highest
+FROM
+	dept_emp de;
+
+/*
+exercise 3
+Obtain a table containing the following three fields for all individuals whose employee number is not 
+greater than 10040:  
+- employee number  
+- the lowest department number among the departments where the employee has worked in (Hint: use 
+a subquery to retrieve this value from the 'dept_emp' table)  
+- assign '110022' as 'manager' to all individuals whose employee number is lower than or equal to 10020, 
+and '110039' to those whose number is between 10021 and 10040 inclusive.  
+Use a CASE statement to create the third field.  
+*/
+
+SELECT 
+    de.emp_no,
+    de.dept_no,
+    (CASE
+        WHEN de.emp_no <= 10020 THEN 110022
+        ELSE 110039
+    END) AS manager
+FROM
+    dept_emp de
+        CROSS JOIN
+    dept_manager dm
+WHERE
+    de.emp_no <= 10040
+GROUP BY de.emp_no
+ORDER BY de.emp_no;
+
+/*
+exercise 4
+Retrieve a list of all employees that have been hired in 2000.  
+*/
+
+SELECT 
+    *
+FROM
+    employees
+WHERE
+    YEAR(hire_date) = 2000
+ORDER BY
+	emp_no;
+    
+/*
+exercise 5
+Retrieve a list of all employees from the ‘titles’ table who are engineers.   
+Repeat the exercise, this time retrieving a list of all employees from the ‘titles’ table who are senior 
+engineers.  
+After LIKE, you could indicate what you are looking for with or without using parentheses. Both options are 
+correct and will deliver the same output. We think using parentheses is better for legibility and that’s why 
+it is the first option we’ve suggested.  
+*/
+
+SELECT 
+    *
+FROM
+    titles
+WHERE
+    title LIKE ('%engineer%');
+SELECT 
+    *
+FROM
+    titles
+WHERE
+    title LIKE ('%senior engineer%');
+
+/*
+exercise 6
+Create a procedure that asks you to insert an employee number and that will obtain an output containing 
+the same number, as well as the number and name of the last department the employee has worked in.  
+Finally, call the procedure for employee number 10010.  
+*/
+
+DROP PROCEDURE IF EXISTS last_dept;
+
+DELIMITER $$
+CREATE PROCEDURE last_dept(IN p_emp_no INT)
+BEGIN
+	SELECT 
+		e.emp_no,
+        de.dept_no,
+        d.dept_name
+	FROM
+		employees e
+        JOIN
+        dept_emp de ON e.emp_no = de.emp_no 
+        JOIN
+        departments d ON de.dept_no = d.dept_no
+	WHERE
+		e.emp_no = p_emp_no
+        AND de.from_date = (SELECT
+        MAX(from_date)
+        FROM
+			dept_emp
+		WHERE
+			emp_no = p_emp_no);
+END $$
+
+DELIMITER ;
+
+CALL last_dept(10010);
+
+/*
+exercise 7
+How many contracts have been registered in the ‘salaries’ table with duration of more than one year and 
+of value higher than or equal to $100,000?   
+*/
+
+SELECT 
+    COUNT(1)
+FROM
+    salaries
+WHERE
+    salary >= 100000
+        AND DATEDIFF(to_date, from_date) > 365;
+
+/*
+exercise 8
+Create a trigger that checks if the hire date of an employee is higher than the current date. If true, set the 
+hire date to equal the current date. Format the output appropriately (YY-mm-dd).  
+
+Extra challenge: You can try to declare a new variable called 'today' which stores today's data, and then 
+use it in your trigger!  
+
+After creating the trigger, execute the following code to see if it's working properly.  
+*/
+
+DELIMITER $$
+
+CREATE TRIGGER check_hire_date
+BEFORE INSERT ON employees
+FOR EACH ROW
+BEGIN
+	IF NEW.hire_date > current_date() THEN
+		SET NEW.hire_date = current_date();
+	END IF;
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER trig_hire_date
+BEFORE INSERT ON employees
+ 
+FOR EACH ROW
+BEGIN 
+    DECLARE today date;
+    SELECT date_format(sysdate(), '%Y-%m-%d') INTO today;
+ 
+	IF NEW.hire_date > today THEN
+		SET NEW.hire_date = today;
+	END IF;
+END $$
+ 
+DELIMITER ;
+
+/*
+exercise 9
+Define a function that retrieves the largest contract salary value of an employee. Apply it to employee 
+number 11356.   
+In addition, what is the lowest contract salary value of the same employee? You may want to create a new 
+function that to obtain the result.    
+*/
+
+DROP FUNCTION IF EXISTS biggest_contract;
+
+#create function that returns largest contract:
+
+DELIMITER $$
+CREATE FUNCTION biggest_contract(p_input_emp_no INT) RETURNS DECIMAL(10,2)
+
+DETERMINISTIC NO SQL READS SQL DATA
+
+BEGIN
+	DECLARE var_biggest_contract DECIMAL(10,2);
+
+SELECT MAX(salary)
+INTO var_biggest_contract
+FROM salaries s
+WHERE s.emp_no = p_input_emp_no;
+RETURN var_biggest_contract;
+
+END $$
+
+DELIMITER ;
+
+SELECT biggest_contract(11356);
+
+#create function that returns lowest contract:
+
+DELIMITER $$
+CREATE FUNCTION lowest_contract(p_input_emp_no INT) RETURNS DECIMAL(10,2)
+
+DETERMINISTIC NO SQL READS SQL DATA
+
+BEGIN
+	DECLARE var_lowest_contract DECIMAL(10,2);
+
+SELECT MIN(salary)
+INTO var_lowest_contract
+FROM salaries s
+WHERE s.emp_no = p_input_emp_no;
+RETURN var_lowest_contract;
+
+END $$
+
+DELIMITER ;
+
+SELECT lowest_contract(11356);
+
+/*
+exercise 10
+Based on the previous exercise, you can now try to create a third function that also accepts a second 
+parameter. Let this parameter be a character sequence. Evaluate if its value is 'min' or 'max' and based on 
+that retrieve either the lowest or the highest salary, respectively (using the same logic and code structure 
+from Exercise 9). If the inserted value is any string value different from ‘min’ or ‘max’, let the function 
+return the difference between the highest and the lowest salary of that employee. 
+*/
+
+DROP FUNCTION IF EXISTS evaluate;
+
+DELIMITER $$
+
+CREATE FUNCTION evaluate(p_input_emp_no INT, p2 VARCHAR(20)) RETURNS DECIMAL(10,2)
+DETERMINISTIC NO SQL READS SQL DATA
+
+BEGIN
+
+DECLARE var_salary_info DECIMAL(10,2);
+
+SELECT
+	CASE
+		WHEN p2 = 'min' THEN MIN(s.salary)
+        WHEN p2 = 'max' THEN MAX(s.salary)
+        ELSE MAX(s.salary) - MIN(s.salary)
+	END AS salary_evaluation
+INTO var_salary_info
+FROM salaries s
+WHERE s.emp_no = p_input_emp_no;
+RETURN var_salary_info;
+
+END$$
+
+DELIMITER ;
